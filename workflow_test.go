@@ -14,9 +14,9 @@ func Test_Workflow(t *testing.T) {
 	env := testSuite.NewTestWorkflowEnvironment()
 	// Mock activity implementation
 
-	env.OnActivity(ImportUsers, mock.Anything, mock.Anything).Return(nil)
+	env.OnActivity(ImportUsers, mock.Anything, mock.Anything).Return(0, nil)
 	env.OnActivity(ApproveUsers, mock.Anything).Return(nil)
-	env.ExecuteWorkflow(OnboardUsers(), mock.Anything)
+	env.ExecuteWorkflow(OnboardUsers, mock.Anything, mock.Anything)
 	require.True(t, env.IsWorkflowCompleted())
 	require.NoError(t, env.GetWorkflowError())
 }

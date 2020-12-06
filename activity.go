@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,17 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var schema = `
-			CREATE TABLE users if not exists (
-				id int auto_increment primary key,
-				name text,
-				dob text,
-				city text,
-				isapproved int default 0
-			);`
-
 // ImportUsers is first activity in workflow
-func ImportUsers(ctx workflow.Context, filename string, DbConnectionString string) error {
+func ImportUsers(ctx workflow.Context, filename string, DbConnectionString string) (int, error) {
 
 	logger := workflow.GetLogger(ctx)
 
@@ -31,30 +23,30 @@ func ImportUsers(ctx workflow.Context, filename string, DbConnectionString strin
 
 	if _, err := os.Stat(filename); err == nil {
 		logger.Error("File does not exists", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
 	if err != nil {
 		logger.Error("Cant open connection to database", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	defer close()
 
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.Exec(DBSchema); err != nil {
 		logger.Error("Error while executing Schema", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		logger.Error("Unable to read from file", zap.Error(err))
-		return err
+		return 0, err
 	}
 
 	r := csv.NewReader(strings.NewReader(string(content)))
-	r.Comma = ';'
+	r.Comma = ','
 	r.Comment = '#'
 
 	sqlStmt := "insert into users(name,dob,city) values(:1,:2,:3)"
@@ -68,24 +60,37 @@ func ImportUsers(ctx workflow.Context, filename string, DbConnectionString strin
 		tx.Commit()
 	}()
 
+	i := 0
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
+
+		if i == 0 {
+			continue
+		}
+
+		i++
+
 		if err != nil {
 			logger.Error("Error while reading from file", zap.Error(err))
-			return err
+			return 0, err
 		}
 
 		if _, err := tx.Exec(sqlStmt, record[0], record[1], record[2]); err != nil {
 			logger.Error("Error while writing user record", zap.Error(err))
-			return err
-
+			return 0, err
 		}
 	}
 
-	return nil
+	return i, nil
+}
+
+// ComposeGreeting is test function
+func ComposeGreeting(name string) (string, error) {
+	greeting := fmt.Sprintf("Hello %s!", name)
+	return greeting, nil
 }
 
 // ApproveUsers waits for signal with list of approved users.

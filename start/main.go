@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"go.temporal.io/sdk/client"
@@ -17,14 +18,18 @@ func main() {
 		log.Fatalln("unable to create Temporal client", err)
 	}
 	defer c.Close()
-	options := client.Options{
+	options := client.StartWorkflowOptions{
 		ID:        app.UserApprovalWorkflow,
 		TaskQueue: app.UserApprovalTaskQueue,
 	}
 
-	we, err := c.ExecuteWorkflow(context.Background(), options, app.OnboardUsers, nil)
+	we, err := c.ExecuteWorkflow(context.Background(), options, app.OnboardUsers, "C:\\Users\\sachi\\projects\\temporal\\app\\users.csv", "root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true")
 	if err != nil {
 		log.Fatalln("error starting OnboardUsers workflow", err)
+	} else {
+		var count int
+		err = we.Get(context.Background(), &count)
+		fmt.Printf("Record Processed %d", count)
 	}
 	// printResults(transferDetails, we.GetID(), we.GetRunID())
 }

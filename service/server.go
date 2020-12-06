@@ -17,8 +17,8 @@ import (
 
 type server struct {
 	Debug        bool
-	Port         int
-	DBConnection string `default:"user:password@/dbname"`
+	Port         string `default:":8080"`
+	DBConnection string `default:"root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true"`
 }
 
 // User holds user details
@@ -47,6 +47,12 @@ func (s *server) GetUsers(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 
 	defer close()
+
+	if _, err := db.Exec(app.DBSchema); err != nil {
+		log.Fatal(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	err = db.SelectContext(r.Context(), &Users, "select id,name,dob,city from users where isapproved=0")
 	if err != nil {
@@ -77,6 +83,8 @@ func (s *server) UpdateUsers(w http.ResponseWriter, r *http.Request, ps httprout
 	c, err := client.NewClient(client.Options{})
 	if err != nil {
 		log.Fatalln("unable to create Temporal client", err)
+		http.Error(w, "Internal Error :Temporal", http.StatusInternalServerError)
+		return
 	}
 	defer c.Close()
 
@@ -85,7 +93,7 @@ func (s *server) UpdateUsers(w http.ResponseWriter, r *http.Request, ps httprout
 
 	if err != nil {
 		log.Fatal(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Internal Error: Workflow", http.StatusInternalServerError)
 		return
 	}
 
@@ -138,5 +146,6 @@ func main() {
 	router.GET("/Users", (&s).GetUsers)
 	router.POST("/Users", (&s).UpdateUsers)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	fmt.Printf("Starting server at %s", s.Port)
+	log.Fatal(http.ListenAndServe(s.Port, router))
 }

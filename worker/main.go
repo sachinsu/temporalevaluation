@@ -20,6 +20,7 @@ func main() {
 	// This worker hosts both Worker and Activity functions
 	w := worker.New(c, app.UserApprovalTaskQueue, worker.Options{})
 	w.RegisterWorkflow(app.OnboardUsers)
+	w.RegisterActivity(app.ComposeGreeting)
 	w.RegisterActivity(app.ImportUsers)
 	w.RegisterActivity(app.ApproveUsers)
 	// Start listening to the Task Queue
