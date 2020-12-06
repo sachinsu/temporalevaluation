@@ -6,7 +6,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 
-	"money-transfer-project-template-go/app"
+	"github.com/sachinsu/temporalevaluation/app"
 )
 
 // @@@SNIPSTART money-transfer-project-template-go-worker
@@ -20,12 +20,13 @@ func main() {
 	// This worker hosts both Worker and Activity functions
 	w := worker.New(c, app.UserApprovalTaskQueue, worker.Options{})
 	w.RegisterWorkflow(app.OnboardUsers)
-	w.RegisterActivity(app.Withdraw)
-	w.RegisterActivity(app.Deposit)
+	w.RegisterActivity(app.ImportUsers)
+	w.RegisterActivity(app.ApproveUsers)
 	// Start listening to the Task Queue
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
 		log.Fatalln("unable to start Worker", err)
 	}
 }
+
 // @@@SNIPEND

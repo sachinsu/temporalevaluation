@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/csv"
 	"io"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
 )
@@ -34,7 +34,7 @@ func ImportUsers(ctx workflow.Context, filename string, DbConnectionString strin
 		return err
 	}
 
-	db, close, err := getSQLXConnection(DbConnectionString)
+	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
 	if err != nil {
 		logger.Error("Cant open connection to database", zap.Error(err))
 		return err
@@ -105,7 +105,7 @@ func ApproveUsers(ctx workflow.Context, DbConnectionString string) error {
 	s.Select(ctx)
 
 	// if len(signalVal) > 0 {
-	// 	db, close, err := getSQLXConnection(DbConnectionString)
+	// 	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
 	// 	if err != nil {
 	// 		logger.Error("Cant open connection to database", zap.Error(err))
 	// 		return err
@@ -154,9 +154,3 @@ func ApproveUsers(ctx workflow.Context, DbConnectionString string) error {
 }
 
 // todo: SendWelcomeSMS
-
-// getSQLXConnection is a helper function to open connection to database
-func getSQLXConnection(dbConn string) (*sqlx.DB, func() error, error) {
-	db, err := sqlx.Connect("mysql", dbConn)
-	return db, db.Close, err
-}

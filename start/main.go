@@ -18,10 +18,9 @@ func main() {
 	}
 	defer c.Close()
 	options := client.Options{
-		ID:        "user-approval-workflow",
+		ID:        app.UserApprovalWorkflow,
 		TaskQueue: app.UserApprovalTaskQueue,
 	}
-
 
 	we, err := c.ExecuteWorkflow(context.Background(), options, app.OnboardUsers, nil)
 	if err != nil {
