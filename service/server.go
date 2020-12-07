@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/julienschmidt/httprouter"
 	"github.com/kelseyhightower/envconfig"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 
 	"github.com/sachinsu/temporalevaluation/app"
 )
@@ -88,8 +90,26 @@ func (s *server) UpdateUsers(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 	defer c.Close()
 
+	workflowOptions := client.StartWorkflowOptions{
+		ID:        app.UserApprovalWorkflow,
+		TaskQueue: app.UserApprovalTaskQueue,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    time.Minute,
+			MaximumAttempts:    5,
+		},
+	}
+	userdata := `
+	name,dob,city
+sachin,1980-01-01,mumbai
+hiren,1985-01-01,valsad
+`
+
+	dbconn := "root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true"
+
 	_, err = c.SignalWithStartWorkflow(r.Context(), app.UserApprovalWorkflow, app.ApprovalSignalName,
-		records, client.StartWorkflowOptions{}, nil, nil)
+		records, workflowOptions, app.OnboardUsers, userdata, dbconn)
 
 	if err != nil {
 		log.Fatal(err.Error())

@@ -26,7 +26,8 @@ func main() {
 	userdata := `
 	name,dob,city
 sachin,1980-01-01,mumbai
-hiren,1985-01-01,valsad`
+hiren,1985-01-01,valsad
+`
 
 	dbconn := "root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true"
 
