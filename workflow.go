@@ -8,10 +8,10 @@ import (
 )
 
 // OnboardUsers is workflow definition functions
-func OnboardUsers(ctx workflow.Context, importFileName string, DbConnectionString string) error {
+func OnboardUsers(ctx workflow.Context, userdata string, DbConnectionString string) error {
 	logger := workflow.GetLogger(ctx)
 
-	logger.Info("Onboardusers", "filename", importFileName, "db Connection", DbConnectionString)
+	logger.Info("Onboardusers", "db Connection", DbConnectionString)
 
 	options := workflow.ActivityOptions{
 		// Timeout options specify when to automatically timeout Actvitivy functions.
@@ -24,7 +24,7 @@ func OnboardUsers(ctx workflow.Context, importFileName string, DbConnectionStrin
 	ctx = workflow.WithActivityOptions(ctx, options)
 
 	var count int
-	err := workflow.ExecuteActivity(ctx, ImportUsers, importFileName, DbConnectionString).Get(ctx, &count)
+	err := workflow.ExecuteActivity(ctx, ImportUsers, userdata, DbConnectionString).Get(ctx, &count)
 	if err != nil {
 		logger.Error("Error with ImportUsers", zap.Error(err))
 		return err
