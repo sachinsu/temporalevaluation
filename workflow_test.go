@@ -13,7 +13,7 @@ func Test_Workflow(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 	// Mock activity implementation
-	filename := "D:\\WL-DATA\\projects\\goprojects\\temporal_template\\users.csv"
+	filename := "C:\\Users\\sachi\\projects\\temporal\\app\\users.csv"
 	dbconn := "user@password@/temporaldb"
 
 	env.OnActivity(ImportUsers, mock.Anything, filename, dbconn).Return(2, nil)
