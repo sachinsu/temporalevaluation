@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"go.temporal.io/sdk/workflow"
+	"go.uber.org/zap"
 )
 
 // OnboardUsers is workflow definition functions
@@ -12,13 +13,6 @@ func OnboardUsers(ctx workflow.Context, importFileName string, DbConnectionStrin
 
 	logger.Info("Onboardusers", "filename", importFileName, "db Connection", DbConnectionString)
 
-	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
-	// retrypolicy := &temporal.RetryPolicy{
-	// 	InitialInterval:    time.Second,
-	// 	BackoffCoefficient: 2.0,
-	// 	MaximumInterval:    time.Minute,
-	// 	MaximumAttempts:    500,
-	// }
 	options := workflow.ActivityOptions{
 		// Timeout options specify when to automatically timeout Actvitivy functions.
 		StartToCloseTimeout: time.Minute,
@@ -29,18 +23,32 @@ func OnboardUsers(ctx workflow.Context, importFileName string, DbConnectionStrin
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var result string
-	err := workflow.ExecuteActivity(ctx, ComposeGreeting, "Somename").Get(ctx, &result)
-	return err
+	var count int
+	err := workflow.ExecuteActivity(ctx, ImportUsers, importFileName, DbConnectionString).Get(ctx, &count)
+	if err != nil {
+		logger.Error("Error with ImportUsers", zap.Error(err))
+		return err
+	}
 
-	// err := workflow.ExecuteActivity(ctx, ImportUsers, importFileName, DbConnectionString).Get(ctx, nil)
-	// if err != nil {
-	// 	return err
-	// }
-	// err := workflow.ExecuteActivity(ctx, ApproveUsers, DbConnectionString).Get(ctx, nil)
-	// if err != nil {
-	// 	return err
-	// }
+	signalChan := workflow.GetSignalChannel(ctx, ApprovalSignalName)
+
+	s := workflow.NewSelector(ctx)
+
+	var signalVal string
+
+	s.AddReceive(signalChan, func(c workflow.ReceiveChannel, more bool) {
+		c.Receive(ctx, &signalVal)
+		logger.Info("Received signal!", zap.String("signal", ApprovalSignalName), zap.String("value", signalVal))
+	})
+
+	logger.Info("Waiting for Signal on Channel" + ApprovalSignalName)
+
+	s.Select(ctx)
+
+	err = workflow.ExecuteActivity(ctx, ApproveUsers, DbConnectionString, signalVal).Get(ctx, nil)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

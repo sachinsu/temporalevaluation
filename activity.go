@@ -3,41 +3,41 @@ package app
 import (
 	"context"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/sdk/activity"
 	"go.uber.org/zap"
 )
 
 // ImportUsers is first activity in workflow
-func ImportUsers(ctx workflow.Context, filename string, DbConnectionString string) (int, error) {
+func ImportUsers(ctx context.Context, filename string, DbConnectionString string) (int, error) {
 
-	logger := workflow.GetLogger(ctx)
+	logger := activity.GetLogger(ctx)
 
-	logger.Info("ImportUsers called.", zap.String("filename", filename))
+	logger.Info("ImportUsers activity started.", zap.String("filename", filename),
+		zap.String("Dbconn", DbConnectionString))
 
 	if _, err := os.Stat(filename); err == nil {
 		logger.Error("File does not exists", zap.Error(err))
 		return 0, err
 	}
 
-	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
-	if err != nil {
-		logger.Error("Cant open connection to database", zap.Error(err))
-		return 0, err
-	}
+	// db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
+	// if err != nil {
+	// 	logger.Error("Cant open connection to database", zap.Error(err))
+	// 	return 0, err
+	// }
 
-	defer close()
+	// defer close()
 
-	if _, err := db.Exec(DBSchema); err != nil {
-		logger.Error("Error while executing Schema", zap.Error(err))
-		return 0, err
-	}
+	// if _, err := db.Exec(DBSchema); err != nil {
+	// 	logger.Error("Error while executing Schema", zap.Error(err))
+	// 	return 0, err
+	// }
 
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -49,16 +49,16 @@ func ImportUsers(ctx workflow.Context, filename string, DbConnectionString strin
 	r.Comma = ','
 	r.Comment = '#'
 
-	sqlStmt := "insert into users(name,dob,city) values(:1,:2,:3)"
+	// sqlStmt := "insert into users(name,dob,city) values(:1,:2,:3)"
 
-	tx := db.MustBegin()
+	// tx := db.MustBegin()
 
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-		tx.Commit()
-	}()
+	// defer func() {
+	// 	if err != nil {
+	// 		tx.Rollback()
+	// 	}
+	// 	tx.Commit()
+	// }()
 
 	i := 0
 	for {
@@ -67,49 +67,34 @@ func ImportUsers(ctx workflow.Context, filename string, DbConnectionString strin
 			break
 		}
 
+		if err != nil {
+			logger.Error("Error while reading from file", zap.Error(err))
+			return 0, err
+		}
+
 		if i == 0 {
 			continue
 		}
 
 		i++
 
-		if err != nil {
-			logger.Error("Error while reading from file", zap.Error(err))
-			return 0, err
-		}
+		logger.Info("Record read is ->", len(record))
 
-		if _, err := tx.Exec(sqlStmt, record[0], record[1], record[2]); err != nil {
-			logger.Error("Error while writing user record", zap.Error(err))
-			return 0, err
-		}
+		// if _, err := tx.Exec(sqlStmt, record[0], record[1], record[2]); err != nil {
+		// 	logger.Error("Error while writing user record", zap.Error(err))
+		// 	return 0, err
+		// }
 	}
 
 	return i, nil
 }
 
-// ComposeGreeting is test function
-func ComposeGreeting(name string) (string, error) {
-	greeting := fmt.Sprintf("Hello %s!", name)
-	return greeting, nil
-}
-
 // ApproveUsers waits for signal with list of approved users.
-func ApproveUsers(ctx workflow.Context, DbConnectionString string) error {
-	var signalVal string
+func ApproveUsers(ctx context.Context, DbConnectionString string, Users string) (int, error) {
 
-	logger := workflow.GetLogger(ctx)
+	logger := activity.GetLogger(ctx)
+	logger.Info("ApprovedUsers called", zap.String("Dbconn", DbConnectionString), zap.String("Userlist", Users))
 
-	signalChan := workflow.GetSignalChannel(ctx, ApprovalSignalName)
-
-	s := workflow.NewSelector(ctx)
-	s.AddReceive(signalChan, func(c workflow.ReceiveChannel, more bool) {
-		c.Receive(ctx, &signalVal)
-		logger.Info("Received signal!", zap.String("signal", ApprovalSignalName), zap.String("value", signalVal))
-	})
-
-	s.Select(ctx)
-
-	// if len(signalVal) > 0 {
 	// 	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
 	// 	if err != nil {
 	// 		logger.Error("Cant open connection to database", zap.Error(err))
@@ -123,7 +108,16 @@ func ApproveUsers(ctx workflow.Context, DbConnectionString string) error {
 	// 		return err
 	// 	}
 
-	// 	r := csv.NewReader(strings.NewReader(signalVal))
+	r := csv.NewReader(strings.NewReader(Users))
+
+	userList, err := r.ReadAll()
+
+	if err != nil {
+		logger.Error("Error reading user list", zap.Error(err))
+		return 0, err
+	}
+
+	return len(userList), nil
 
 	// 	tx := db.MustBegin()
 
@@ -154,8 +148,12 @@ func ApproveUsers(ctx workflow.Context, DbConnectionString string) error {
 	// 	}
 
 	// }
-
-	return nil
 }
 
-// todo: SendWelcomeSMS
+// ComposeGreeting is test function
+// func ComposeGreeting(ctx context.Context, name string) (string, error) {
+// 	logger := activity.GetLogger(ctx)
+// 	logger.Info("Composegreeting started")
+// 	greeting := fmt.Sprintf("Hello %s!", name)
+// 	return greeting, nil
+// }

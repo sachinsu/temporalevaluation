@@ -2,9 +2,9 @@ package app
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/testsuite"
 )
@@ -13,10 +13,15 @@ func Test_Workflow(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 	// Mock activity implementation
+	filename := "D:\\WL-DATA\\projects\\goprojects\\temporal_template\\users.csv"
+	dbconn := "user@password@/temporaldb"
 
-	env.OnActivity(ImportUsers, mock.Anything, mock.Anything).Return(0, nil)
-	env.OnActivity(ApproveUsers, mock.Anything).Return(nil)
-	env.ExecuteWorkflow(OnboardUsers, mock.Anything, mock.Anything)
+	env.OnActivity(ImportUsers, mock.Anything, filename, dbconn).Return(2, nil)
+	env.RegisterDelayedCallback(func() {
+		env.SignalWorkflow(ApprovalSignalName, mock.Anything)
+	}, time.Minute)
+	env.OnActivity(ApproveUsers, mock.Anything, dbconn, mock.Anything).Return(0, nil)
+	env.ExecuteWorkflow(OnboardUsers, filename, dbconn)
 	require.True(t, env.IsWorkflowCompleted())
 	require.NoError(t, env.GetWorkflowError())
 }
