@@ -18,6 +18,7 @@ func ImportUsers(ctx context.Context, userdata string, DbConnectionString string
 
 	logger.Info("ImportUsers activity started.", zap.String("Dbconn", DbConnectionString))
 
+	// Open connection to database
 	db, close, err := GetSQLXConnection(context.Background(), DbConnectionString)
 	if err != nil {
 		logger.Error("Cant open connection to database", zap.Error(err))
@@ -130,11 +131,3 @@ func ApproveUsers(ctx context.Context, DbConnectionString string, Users string) 
 	}
 	return i, nil
 }
-
-// ComposeGreeting is test function
-// func ComposeGreeting(ctx context.Context, name string) (string, error) {
-// 	logger := activity.GetLogger(ctx)
-// 	logger.Info("Composegreeting started")
-// 	greeting := fmt.Sprintf("Hello %s!", name)
-// 	return greeting, nil
-// }

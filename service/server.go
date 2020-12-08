@@ -66,6 +66,7 @@ func (s *server) GetUsers(w http.ResponseWriter, r *http.Request, ps httprouter.
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
 	if err := json.NewEncoder(w).Encode(Users); err != nil {
+		log.Fatal(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -100,54 +101,15 @@ func (s *server) UpdateUsers(w http.ResponseWriter, r *http.Request, ps httprout
 			MaximumAttempts:    5,
 		},
 	}
-	userdata := `
-	name,dob,city
-sachin,1980-01-01,mumbai
-hiren,1985-01-01,valsad
-`
-
-	dbconn := "root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true"
 
 	_, err = c.SignalWithStartWorkflow(r.Context(), app.UserApprovalWorkflow, app.ApprovalSignalName,
-		records, workflowOptions, app.OnboardUsers, userdata, dbconn)
+		records, workflowOptions, app.OnboardUsers, app.Userdata, s.DBConnection)
 
 	if err != nil {
 		log.Fatal(err.Error())
 		http.Error(w, "Internal Error: Workflow", http.StatusInternalServerError)
 		return
 	}
-
-	// db, close, err := app.GetSQLXConnection(r.Context(), s.DBConnection)
-
-	// if err != nil {
-	// 	log.Fatal(err.Error())
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// defer close()
-	// sqlStmt := "update users set isapproved=1 where id=:1"
-
-	// tx := db.MustBegin()
-
-	// defer func() {
-	// 	if err != nil {
-	// 		tx.Rollback()
-	// 	}
-	// 	tx.Commit()
-	// }()
-
-	// for i, line := range records {
-	// 	if i == 0 {
-	// 		continue
-	// 	}
-	// 	_, err := tx.ExecContext(r.Context(), sqlStmt, line[0])
-	// 	if err != nil {
-	// 		log.Fatal(err.Error())
-	// 		w.WriteHeader(http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// }
 
 	fmt.Fprint(w, "Success")
 }

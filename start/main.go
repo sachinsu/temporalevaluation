@@ -23,15 +23,7 @@ func main() {
 		TaskQueue: app.UserApprovalTaskQueue,
 	}
 
-	userdata := `
-	name,dob,city
-sachin,1980-01-01,mumbai
-hiren,1985-01-01,valsad
-`
-
-	dbconn := "root:passwd@tcp(localhost:3307)/temporaldb?multiStatements=true"
-
-	we, err := c.ExecuteWorkflow(context.Background(), options, app.OnboardUsers, userdata, dbconn)
+	we, err := c.ExecuteWorkflow(context.Background(), options, app.OnboardUsers, app.Userdata, app.Dbconn)
 	if err != nil {
 		log.Fatalln("error starting OnboardUsers workflow", err)
 	} else {

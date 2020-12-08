@@ -11,14 +11,10 @@ import (
 func OnboardUsers(ctx workflow.Context, userdata string, DbConnectionString string) error {
 	logger := workflow.GetLogger(ctx)
 
-	logger.Info("Onboardusers", "db Connection", DbConnectionString)
+	logger.Info("Onboardusers called", "db Connection", DbConnectionString)
 
 	options := workflow.ActivityOptions{
-		// Timeout options specify when to automatically timeout Actvitivy functions.
 		StartToCloseTimeout: time.Minute,
-		// Optionally provide a customized RetryPolicy.
-		// Temporal retries failures by default, this is just an example.
-		// RetryPolicy: retrypolicy,
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, options)
@@ -30,6 +26,7 @@ func OnboardUsers(ctx workflow.Context, userdata string, DbConnectionString stri
 		return err
 	}
 
+	// Configure to wait on channel for signal
 	signalChan := workflow.GetSignalChannel(ctx, ApprovalSignalName)
 
 	s := workflow.NewSelector(ctx)
@@ -45,11 +42,10 @@ func OnboardUsers(ctx workflow.Context, userdata string, DbConnectionString stri
 
 	s.Select(ctx)
 
+	// Call ApproveUsers activity with data received in signal
 	err = workflow.ExecuteActivity(ctx, ApproveUsers, DbConnectionString, signalVal).Get(ctx, nil)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
-// @@@SNIPEND
