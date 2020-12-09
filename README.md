@@ -1,6 +1,6 @@
 # Using Temporal.io for Workflow Orchestration
 
-This is source code for the article [Evaluating Temporal for Workflow Orchestration](google.com).
+This is source code for the article [Evaluating Temporal for Workflow Orchestration](https://sachinsu.github.io/posts/temporalworkflow/).
 
 ## Prerequisites/Setup 
 
